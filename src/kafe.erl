@@ -1092,17 +1092,18 @@ remove_dead_brokers(#{brokers_list := BrokersList} = State) ->
               end, State, BrokersList).
 
 % @hidden
-get_host([], _, _) -> undefined;
-get_host([Addr|Rest], Hostname, AddrType) ->
+get_host(Addrs, Hostname, AddrType) ->
   case inet:getaddr(Hostname, AddrType) of
     {ok, Addr} ->
-      case inet:gethostbyaddr(Addr) of
-        {ok, #hostent{h_name = Hostname1, h_aliases = HostAlias}} ->
-          {Addr, lists:usort([Hostname|[Hostname1|HostAlias]])};
-        _ ->
-          {Addr, [Hostname]}
+      case {lists:member(Addr, Addrs), inet:gethostbyaddr(Addr)} of
+          {false, _} ->
+              undefined;
+          {true, {ok, #hostent{h_name = Hostname1, h_aliases = HostAlias}}} ->
+              {Addr, lists:usort([Hostname|[Hostname1|HostAlias]])};
+          {true, _} ->
+              {Addr, [Hostname]}
       end;
-    _ -> get_host(Rest, Hostname, AddrType)
+      _ -> undefined
   end.
 
 % @hidden
